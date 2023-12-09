@@ -1,5 +1,6 @@
 import sys
-import re
+import re, math
+import functools
 
 def read_input() -> tuple[str, dict]:
     seq = sys.stdin.readline().rstrip()
@@ -12,43 +13,46 @@ def read_input() -> tuple[str, dict]:
         adj[st] = (left, right)
     return seq, adj 
 
-def find_recurring(start_node: str, seq: str, adj: dict):
-    cur_node = start_node
-    step = 0 
-
-    visited = set()
-    print(start_node)
-    hit = False
+def loop_details(start_node: str, seq: str, adj: dict): 
+    cycle_start, cycle_length, found_start = 0, 0, False
+    cur_node, step = start_node, 1
     while True:
-        seq_id = (step) %  len(seq)
-        move = 0 if seq[seq_id] == 'L' else 1
+        move = seq[(step-1) % len(seq)]
+        next_node = adj[cur_node][0 if move == 'L' else 1]
 
-        next_node = adj[cur_node][move]
-        if (next_node, seq_id) in visited:
-            if hit:
-                print(f"exiting at step {step}")
-                break 
-            hit = True
-
+        # find first target point:
+        if next_node[-1] == 'Z':
+            if found_start:
+                cycle_length = step - cycle_start
+                break
+            else:
+                cycle_start = step
+                found_start = True 
+        step += 1
         cur_node = next_node
-        step += 1      
-
-        if next_node[-1] == 'Z': 
-            print(f"hit node {next_node} at step {step}")
-            visited.add((next_node, seq_id))
-
-
-    print (visited)
+    return cycle_start, cycle_length
 
 def solve(seq: str, adj: dict):
-    # select all nodes that end with A 
-    cur_nodes = list(filter(lambda name: name[-1]=='A', adj.keys()))
+    start_nodes = list(filter(lambda name: name[-1]=='A', adj.keys()))
+    cycle_lengths = []
+    for node in start_nodes:
+        cycle_start, cycle_length = loop_details(node, seq, adj)
+        print(cycle_start, cycle_length)
+        cycle_lengths.append(cycle_length)
 
-    for node in cur_nodes:
-        find_recurring(node, seq, adj)
+    gcd = cycle_lengths[0]
+    for cl in cycle_lengths:
+        gcd = math.gcd(gcd, cl)
+
+    res = 1
+    for cl in cycle_lengths:
+        res = res * cl 
+    res /= gcd**(len(cycle_lengths)-1)
+    print (f"{res:f}")
 
 def main():
     sequence, adj = read_input()
+    print(len(sequence)) 
     solve(sequence, adj)
 
 if __name__ == "__main__":
